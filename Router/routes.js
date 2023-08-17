@@ -9,7 +9,7 @@ route.post('/register', async(req,res)=>{
      
 
 
-    const {name,surname,number,cpassword,password}=req.body;
+    const {name,surname,number,cpassword,password,email}=req.body;
 
     try {
         
