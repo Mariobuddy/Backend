@@ -12,14 +12,14 @@ name:{
     type:String,
     required:true,
     minLength:3,
-    maxLength:10
+    maxLength:15
 },
 
 surname:{
     type:String,
     required:true,
     minLength:3,
-    maxLength:10
+    maxLength:15
 },
 
 email:{
@@ -33,17 +33,6 @@ email:{
     }
 },
 
-age:{
-    type:Number,
-    required:true,
-    min:1,
-},
-
-gender:{
-    type:String,
-    required:true,
-},
-
 number:{
     type:Number,
     required:true,
@@ -54,48 +43,54 @@ password:{
     type:String,
     required:true,
     minLength:6,
-    maxLength:15
 },
 
 cpassword:{
     type:String,
     minLength:6,
-    maxLength:15,
     required:true
 },
 
 Token:[
     {
         token:{
-        type:String
+        type:String,
+        required:true
         }
     }
-]
+],
+
+
 
 });
 
 Schema.pre('save',async function(next){
     try {
+
+    if(this.isModified('password')){
     this.password=await bcrypt.hash(this.password,12);
     this.cpassword=await bcrypt.hash(this.cpassword,12);
-    console.log('password is hash');
+
+}
     next();
     } catch (error) {
         console.log('password is not hash');
     }
-})
+});
 
 
 
 Schema.methods.getTokens=async function(){
 
-    try {
-let signing=jwt.sign({_id:this._id},Auto);
+try{
 
-this.Token=await this.Token.concat({token:signing});
+let token=jwt.sign({_id:this._id},Auto);
 
-console.log('token generated');
-return signing;
+this.Token=await this.Token.concat({token:token});
+
+await this.save();
+
+return token;
 
     } catch (error) {
         console.log('token is not created');
@@ -105,8 +100,45 @@ return signing;
 
 
 
-const User=mongoose.model('user',Schema);
 
+
+Schema.methods.Storeit=async function(name,email,message){
+
+ try {
+
+    this.messages=this.messages.concat({name,email,message});
+
+    await this.save();
+
+    return this.messages;
+
+ } catch (error) {
+
+    console.log(error);
+ }
+
+
+
+}
+
+Schema.methods.GetCart=async function(idchan,price,gcount,gtick,SingleProduct){
+    try {
+        this.carts=this.carts.concat({id:idchan,price,amount:gcount,color:gtick,data:SingleProduct});
+
+        await this.save();
+
+        return this.carts;
+        
+    } catch (error) {
+        console.log(error)
+    }
+
+}
+
+
+
+
+const User=mongoose.model('user',Schema);
 
 
 module.exports=User;

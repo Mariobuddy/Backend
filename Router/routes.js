@@ -1,8 +1,6 @@
 const route=require('express').Router();
 const User=require('../Database/Schema');
-const cookieparser=require('cookie-parser');
 const bcrypt=require('bcrypt');
-const jwt=require('jsonwebtoken');
 const Auth=require('../Middleware/auth');
 
 
@@ -11,13 +9,13 @@ route.post('/register', async(req,res)=>{
      
 
 
-    const {name,surname,age,number,email,gender,cpassword,password}=req.body;
+    const {name,surname,number,cpassword,password}=req.body;
 
     try {
         
         let userdata=await User.find({email:email});
          
-        if(!name || !surname ||!age ||!number ||!email ||!gender ||!cpassword ||!password){
+        if(!name || !surname ||!number ||!email  ||!cpassword ||!password){
          res.status(500).json({con:500});
          return;
         }
@@ -32,18 +30,10 @@ route.post('/register', async(req,res)=>{
         if(password===cpassword){
 
             userdata=new User({
-            name,surname,age,number,email,gender,cpassword,password
-          });
+            name,surname,number,email,cpassword,password
+          });  
   
-          let token=await userdata.getTokens();
-  
-          res.cookie('jwt',token,{
-            httpOnly:true,
-            secure:false,
-          });
-
-  
-          let data=await userdata.save();
+          await userdata.save();
            
           res.status(200).json({con:200});
           return;
@@ -60,14 +50,106 @@ route.post('/register', async(req,res)=>{
 
 
 route.get('/about',Auth,(req,res)=>{
-res.status(200).send('About');
+try {
+  res.status(200).send(req.maindata);
+} catch (error) {
+  res.status(400).send('Error');
+}
 });
+
+
+route.post('/cart',Auth,async(req,res)=>{
+
+  const {idchan,price,gcount,gtick,SingleProduct}=req.body;
+
+ try {
+   
+  let userdata=await User.findOne({_id:req.userID});
+
+  let carting=await userdata.GetCart(idchan,price,gcount,gtick,SingleProduct);
+
+  await userdata.save();
+
+  res.status(200).json({con:200});
+  
+ } catch (error) {
+  res.status(400).json({con:400});
+
+  
+ }
+
+});
+
+route.delete('/deletecart',(req,res)=>{
+
+  try {
+    
+
+    res.status(200).json({con:200});
+  } catch (error) {
+    res.status(400).json({con:400});
+  }
+
+})
+
+route.post('/contact',Auth,async(req,res)=>{
+
+  const {name,email,message}=req.body;
+
+ 
+  try {
+
+
+    let userdata= await User.findOne({_id:req.userID});
+
+
+    if(userdata){
+
+      
+      let storedata=await userdata.Storeit(name,email,message);
+
+      await userdata.save();
+
+      res.status(200).json({con:200});
+
+    }
+
+  } catch (error) {
+    console.log(error);
+    res.status(400).json({con:400});
+  }
+
+})
+
+
+route.get('/loginout',Auth,(req,res)=>{
+  try {
+    res.clearCookie('jwt',{path:'/'});
+    res.status(200).json({con:200});
+    
+  } catch (error) {
+    res.status(400).json({con:400});
+  }
+})
+
+
+
+route.get('/info',Auth,(req,res)=>{
+  try {
+    res.status(200).send(req.maindata);
+  } catch (error) {
+    res.status(400).send('Error');
+  }
+  });
+
+
+
+
 
 
 route.post('/login',async (req,res)=>{
 
   const {email,password}=req.body;
-
 
 
    try {
@@ -78,13 +160,9 @@ route.post('/login',async (req,res)=>{
 
     if(!password && email){
       res.status(234).json({con:234});
-
     }
     
    if(!email || !password){
-    console.log(email)
-    console.log(password)
-
     res.status(400).json({con:400});
    }
 
@@ -93,18 +171,21 @@ route.post('/login',async (req,res)=>{
 
    let userdata=await User.findOne({email:email});
 
-
      
     if(userdata){
      
       const Match=await bcrypt.compare(password,userdata.password);
-       
-         let token=await userdata.getTokens();
+      
+      let token=await userdata.getTokens();
+
   
-          res.cookie('jwt',token,{
-            httpOnly:true,
-            secure:false,
-          });
+           res.cookie('jwt', token, {
+           httpOnly: true,
+           secure: false,
+         });
+       
+         await userdata.save();
+
 
 
           if(Match){
